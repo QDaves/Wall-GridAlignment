@@ -1,0 +1,307 @@
+<Window x:Class="GridAlignment.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Wall Grid Alignment"
+        Width="520" Height="520"
+        MinWidth="520" MinHeight="480"
+        Background="#f5f5f5"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResizeWithGrip">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="32" ResizeBorderThickness="5" GlassFrameThickness="0" CornerRadius="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <Style x:Key="spinbtn" TargetType="Button">
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Background" Value="#e0e0e0"/>
+            <Setter Property="BorderBrush" Value="#bbb"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#444"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="spintxt" TargetType="TextBox">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#bbb"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+        <Style x:Key="posbtn" TargetType="Button">
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Background" Value="#dde4ee"/>
+            <Setter Property="BorderBrush" Value="#99b"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#335"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="sectionborder" TargetType="Border">
+            <Setter Property="BorderBrush" Value="#ddd"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#fafafa"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="10,8"/>
+        </Style>
+        <Style x:Key="sectionheader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#666"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="titlebarbtn" TargetType="Button">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#333"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+        </Style>
+        <Style x:Key="actionbtn" TargetType="Button">
+            <Setter Property="Width" Value="70"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Custom Title Bar -->
+        <Grid Grid.Row="0" Background="#e8e8e8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Text="Wall Grid Alignment" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="12" Foreground="#333"/>
+            <CheckBox x:Name="chkontop" Grid.Column="2" Content="Always on Top" VerticalAlignment="Center" FontSize="10" Margin="0,0,12,0" WindowChrome.IsHitTestVisibleInChrome="True"/>
+            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                <Button x:Name="btnminimize" Content="─" Style="{StaticResource titlebarbtn}"/>
+                <Button x:Name="btnmaximize" Content="□" Style="{StaticResource titlebarbtn}"/>
+                <Button x:Name="btnclose" Content="✕" Style="{StaticResource titlebarbtn}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: Import/Groups + IDs + DataGrid -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="8"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="8"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Furniture + Import + Capture + Groups + Sort -->
+                <Border Grid.Row="0" Style="{StaticResource sectionborder}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="6"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="cmbfurni" Grid.Column="0" Height="26" FontSize="11"/>
+                            <Button x:Name="btnimportfurni" Grid.Column="2" Content="Import" Width="55" Height="26" FontSize="11"/>
+                            <Button x:Name="btncaptureids" Grid.Column="4" Content="Capture" Width="60" Height="26" FontSize="11" Background="#e8eef8"/>
+                        </Grid>
+
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="55"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="cmbgroups" Grid.Column="0" Height="26" FontSize="11"/>
+                            <Button x:Name="btnsortids" Grid.Column="2" Content="Sort ID" Height="26" FontSize="11"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- IDs TextBox -->
+                <TextBox x:Name="txtids" Grid.Row="2" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" FontSize="10" BorderBrush="#ccc"/>
+
+                <!-- Items Grid -->
+                <Border Grid.Row="4" Background="#fff" BorderBrush="#ccc" BorderThickness="1" CornerRadius="4">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" BorderBrush="#eee" BorderThickness="0,0,0,1" Padding="8,4">
+                            <Label x:Name="lblitemcount" Content="Items: 0" FontSize="11" Foreground="#444" Padding="0"/>
+                        </Border>
+
+                        <DataGrid x:Name="dgvitems" Grid.Row="1"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal"
+                                  Background="#fff"
+                                  Foreground="#222"
+                                  BorderThickness="0"
+                                  RowBackground="#fff"
+                                  AlternatingRowBackground="#f8f8f8"
+                                  RowHeight="22"
+                                  FontSize="11">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70"/>
+                                <DataGridTextColumn Header="Col" Binding="{Binding Col}" Width="35"/>
+                                <DataGridTextColumn Header="Row" Binding="{Binding Row}" Width="35"/>
+                                <DataGridTextColumn Header="Location" Binding="{Binding LocationStr}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- RIGHT: Move + Grid + Buttons -->
+            <StackPanel Grid.Column="2">
+                <!-- Move Controls -->
+                <Border Style="{StaticResource sectionborder}" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="MOVE" Style="{StaticResource sectionheader}"/>
+
+                        <!-- Arrow buttons with rotate and step -->
+                        <Grid HorizontalAlignment="Center" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="36"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="36"/>
+                                <RowDefinition Height="36"/>
+                            </Grid.RowDefinitions>
+
+                            <Button x:Name="btnrotate" Content="↻" Grid.Column="0" Grid.Row="0" Style="{StaticResource posbtn}" ToolTip="Rotate R/L"/>
+                            <Button x:Name="btnposup" Content="↑" Grid.Column="1" Grid.Row="0" Style="{StaticResource posbtn}"/>
+                            <TextBox x:Name="txtstep" Text="15" Grid.Column="2" Grid.Row="0" Width="34" Height="34" TextAlignment="Center" VerticalContentAlignment="Center" FontSize="11" ToolTip="Step size"/>
+                            <Button x:Name="btnposleft" Content="←" Grid.Column="0" Grid.Row="1" Style="{StaticResource posbtn}"/>
+                            <Button x:Name="btnposdown" Content="↓" Grid.Column="1" Grid.Row="1" Style="{StaticResource posbtn}"/>
+                            <Button x:Name="btnposright" Content="→" Grid.Column="2" Grid.Row="1" Style="{StaticResource posbtn}"/>
+                        </Grid>
+
+                        <!-- Offset and Layer stacked -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="Offset" Width="40" VerticalAlignment="Center" FontSize="11"/>
+                                <Button x:Name="btnoffsetminus" Content="−" Style="{StaticResource spinbtn}"/>
+                                <TextBox x:Name="txtrowoffset" Text="0" Style="{StaticResource spintxt}"/>
+                                <Button x:Name="btnoffsetplus" Content="+" Style="{StaticResource spinbtn}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Layer" Width="40" VerticalAlignment="Center" FontSize="11"/>
+                                <Button x:Name="btnzminus" Content="−" Style="{StaticResource spinbtn}"/>
+                                <TextBox x:Name="txtzindex" Text="0" Style="{StaticResource spintxt}"/>
+                                <Button x:Name="btnzplus" Content="+" Style="{StaticResource spinbtn}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Grid Settings -->
+                <Border Style="{StaticResource sectionborder}" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="GRID" Style="{StaticResource sectionheader}"/>
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="Cols" Width="40" VerticalAlignment="Center" FontSize="11"/>
+                                <Button x:Name="btncolsminus" Content="−" Style="{StaticResource spinbtn}"/>
+                                <TextBox x:Name="txtcols" Text="5" Style="{StaticResource spintxt}"/>
+                                <Button x:Name="btncolsplus" Content="+" Style="{StaticResource spinbtn}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="↔" Width="40" VerticalAlignment="Center" FontSize="14" TextAlignment="Center"/>
+                                <Button x:Name="btnspacingxminus" Content="−" Style="{StaticResource spinbtn}"/>
+                                <TextBox x:Name="txtspacingx" Text="8" Style="{StaticResource spintxt}"/>
+                                <Button x:Name="btnspacingxplus" Content="+" Style="{StaticResource spinbtn}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="Rows" Width="40" VerticalAlignment="Center" FontSize="11"/>
+                                <Button x:Name="btnrowsminus" Content="−" Style="{StaticResource spinbtn}"/>
+                                <TextBox x:Name="txtrows" Text="5" Style="{StaticResource spintxt}"/>
+                                <Button x:Name="btnrowsplus" Content="+" Style="{StaticResource spinbtn}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="↕" Width="40" VerticalAlignment="Center" FontSize="14" TextAlignment="Center"/>
+                                <Button x:Name="btnspacingyminus" Content="−" Style="{StaticResource spinbtn}"/>
+                                <TextBox x:Name="txtspacingy" Text="8" Style="{StaticResource spintxt}"/>
+                                <Button x:Name="btnspacingyplus" Content="+" Style="{StaticResource spinbtn}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Action Buttons -->
+                <Border Style="{StaticResource sectionborder}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="btnimportfile" Grid.Column="0" Content="Load" Style="{StaticResource actionbtn}" Width="Auto"/>
+                            <Button x:Name="btnexport" Grid.Column="2" Content="Save" Style="{StaticResource actionbtn}" Width="Auto"/>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="btnclear" Grid.Column="0" Content="Clear" Style="{StaticResource actionbtn}" Width="Auto" Background="#e85050" Foreground="#fff" BorderBrush="#c44"/>
+                            <Button x:Name="btnmoveall" Grid.Column="2" Content="Move All" Style="{StaticResource actionbtn}" Width="Auto" Background="#4a7c4a" Foreground="#fff" BorderBrush="#3a6a3a"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Status Bar at Bottom -->
+        <Border Grid.Row="2" Background="#e8e8e8" Padding="12,6">
+            <Label x:Name="lblstatus" Content="Ready" FontSize="10" Foreground="#666" Padding="0"/>
+        </Border>
+    </Grid>
+</Window>
