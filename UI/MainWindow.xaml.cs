@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     private bool ignoreidchange = false;
     private ObservableCollection<GridItem> griditems = new();
     private List<long> importedids = new();
+    private List<GridItem>? importedgrid;
     private List<IdGroup> groups = new();
     private DispatcherTimer? previewtimer;
     private bool previewpending = false;
@@ -243,6 +244,7 @@ public partial class MainWindow : Window
         if (newids.SequenceEqual(importedids)) return;
 
         importedids = newids;
+        importedgrid = null;
 
         if (importedids.Count > 0)
             updatestartfromfirstid();
@@ -352,6 +354,7 @@ public partial class MainWindow : Window
         if (!importedids.Contains(id))
         {
             importedids.Add(id);
+            importedgrid = null;
             ignoreidchange = true;
             txtids.Text = string.Join("\n", importedids);
             ignoreidchange = false;
@@ -385,6 +388,7 @@ public partial class MainWindow : Window
     {
         griditems.Clear();
         importedids.Clear();
+        importedgrid = null;
         startlocation = null;
 
         lblstatus.Content = "Start: -";
@@ -426,6 +430,7 @@ public partial class MainWindow : Window
 
         importedids.Clear();
         importedids.AddRange(ids);
+        importedgrid = null;
         ignoreidchange = true;
         txtids.Text = string.Join("\n", importedids);
         ignoreidchange = false;
@@ -523,6 +528,7 @@ public partial class MainWindow : Window
         if (group.Ids.Count == 0) return;
 
         importedids = group.Ids.ToList();
+        importedgrid = null;
         ignoreidchange = true;
         txtids.Text = string.Join("\n", importedids);
         ignoreidchange = false;
@@ -617,10 +623,18 @@ public partial class MainWindow : Window
             {
                 startlocation = griditems[0].TargetLocation;
                 orientation = griditems[0].TargetLocation.Orientation;
+
+                importedgrid = griditems.ToList();
+                txtcols.Text = (importedgrid.Max(g => g.Col) + 1).ToString();
+                txtrows.Text = (importedgrid.Max(g => g.Row) + 1).ToString();
+            }
+            else
+            {
+                importedgrid = null;
             }
 
             setstatus($"loaded {griditems.Count} items");
-            sendclientsidepreview();
+            onsettingchanged(null, EventArgs.Empty);
         }
         catch (Exception ex)
         {
@@ -700,6 +714,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (importedids.Count == 0)
+        {
+            setstatus("import furniture or add IDs");
+            return;
+        }
+
         int.TryParse(txtcols.Text, out int columns);
         int.TryParse(txtrows.Text, out int rows);
         int.TryParse(txtspacingx.Text, out int spacingx);
@@ -712,51 +732,69 @@ public partial class MainWindow : Window
         if (spacingx < 1) spacingx = 1;
         if (spacingy < 1) spacingy = 1;
 
-        var room = ext.Room.Room;
-        IWallItem[] itemstouse;
-
-        if (importedids.Count > 0)
+        if (importedgrid != null)
         {
-            var roomitems = room.WallItems.ToDictionary(x => x.Id);
-            itemstouse = importedids
-                .Where(id => roomitems.ContainsKey(id))
-                .Select(id => roomitems[id])
-                .ToArray();
+            columns = importedgrid.Max(g => g.Col) + 1;
+            rows = importedgrid.Max(g => g.Row) + 1;
+        }
 
-            if (itemstouse.Length == 0)
+        var room = ext.Room.Room;
+        var roomitems = room.WallItems.ToDictionary(x => x.Id);
+        var locations = GridPlacer.creategrid(room, startlocation.Value, columns, rows, spacingx, spacingy, rowoffset, zindex);
+
+        griditems.Clear();
+
+        if (importedgrid != null)
+        {
+            foreach (var cell in importedgrid)
             {
-                setstatus("no IDs found in room");
-                return;
+                if (cell.Id == 0) continue;
+                if (!roomitems.TryGetValue(cell.Id, out var item)) continue;
+
+                int idx = cell.Row * columns + cell.Col;
+                if (idx < 0 || idx >= locations.Count) continue;
+
+                griditems.Add(new GridItem
+                {
+                    Id = cell.Id,
+                    Col = cell.Col,
+                    Row = cell.Row,
+                    LocationStr = locations[idx].ToString(),
+                    TargetLocation = locations[idx],
+                    Item = item
+                });
             }
         }
         else
         {
-            setstatus("import furniture or add IDs");
+            var itemstouse = importedids
+                .Where(id => roomitems.ContainsKey(id))
+                .Select(id => roomitems[id])
+                .ToArray();
+
+            int itemcount = Math.Min(itemstouse.Length, locations.Count);
+
+            for (int i = 0; i < itemcount; i++)
+            {
+                griditems.Add(new GridItem
+                {
+                    Id = itemstouse[i].Id,
+                    Col = i % columns,
+                    Row = i / columns,
+                    LocationStr = locations[i].ToString(),
+                    TargetLocation = locations[i],
+                    Item = itemstouse[i]
+                });
+            }
+        }
+
+        if (griditems.Count == 0)
+        {
+            setstatus("no IDs found in room");
             return;
         }
 
-        var locations = GridPlacer.creategrid(room, startlocation.Value, columns, rows, spacingx, spacingy, rowoffset, zindex);
-
-        griditems.Clear();
-        int itemcount = Math.Min(itemstouse.Length, locations.Count);
-
-        for (int i = 0; i < itemcount; i++)
-        {
-            int col = i % columns;
-            int row = i / columns;
-
-            griditems.Add(new GridItem
-            {
-                Id = itemstouse[i].Id,
-                Col = col,
-                Row = row,
-                LocationStr = locations[i].ToString(),
-                TargetLocation = locations[i],
-                Item = itemstouse[i]
-            });
-        }
-
-        lblitemcount.Content = $"Items: {itemcount}";
+        lblitemcount.Content = $"Items: {griditems.Count}";
 
         var extcopy = ext;
         var itemscopy = griditems.ToList();
