@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private WallLocation? startlocation;
     private char orientation = 'r';
     private bool capturingids = false;
+    private bool pickstartmode = false;
     private bool ignoregroupselect = false;
     private bool ignoreidchange = false;
     private ObservableCollection<GridItem> griditems = new();
@@ -70,6 +71,8 @@ public partial class MainWindow : Window
         btnposleft.Click += (s, e) => { stopcapture(); movestartpos(-getstep(), 0); };
         btnposright.Click += (s, e) => { stopcapture(); movestartpos(getstep(), 0); };
         btnrotate.Click += onrotate;
+        btnpickstart.Click += onpickstart_click;
+        ext.Intercepted += on_intercepted_packet;
 
         btncolsminus.Click += (s, e) => adjustvalue(txtcols, -1, 1, 99);
         btncolsplus.Click += (s, e) => adjustvalue(txtcols, 1, 1, 99);
@@ -317,6 +320,139 @@ public partial class MainWindow : Window
         }
 
         onsettingchanged(null, EventArgs.Empty);
+    }
+
+    private void onpickstart_click(object sender, RoutedEventArgs e)
+    {
+        pickstartmode = !pickstartmode;
+        btnpickstart.Background = pickstartmode
+            ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xf8, 0xe8, 0xe8))
+            : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xdd, 0xe4, 0xee));
+
+        if (pickstartmode)
+            setstatus("move any wall item to set start");
+        else
+            setstatus("pick-start cancelled");
+    }
+
+    private void on_intercepted_packet(Xabbo.Intercept e)
+    {
+        if (!pickstartmode) return;
+        if (e.Packet.Header.Direction != Xabbo.Direction.Out) return;
+        var h = ext.MoveWallItemHeader;
+        if (h == null) return;
+        if (e.Packet.Header != h) return;
+
+        e.Block();
+        pickstartmode = false;
+
+        int capturedId = 0;
+        string? capturedLoc = null;
+        try
+        {
+            var pkt = e.Packet.Copy();
+            pkt.Position = 0;
+            capturedId = pkt.Read<int>();
+            capturedLoc = pkt.Read<string>();
+        }
+        catch { }
+
+        if (string.IsNullOrEmpty(capturedLoc)) return;
+
+        Dispatcher.Invoke(() =>
+        {
+            btnpickstart.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xdd, 0xe4, 0xee));
+
+            try
+            {
+                var room = ext.Room?.Room;
+                var oldItem = room?.WallItems.FirstOrDefault(x => x.Id == capturedId);
+                if (oldItem != null && ext.Messages != null && ext.Session != null)
+                {
+                    var revert = new WallItem(oldItem);
+                    var inHdr = ext.Messages.Resolve(In.ItemUpdate);
+                    var rpkt = new Xabbo.Messages.Packet(inHdr, ext.Session.Client.Type);
+                    rpkt.Write(revert);
+                    ext.Send(rpkt);
+                }
+            }
+            catch { }
+
+            if (WallLocation.TryParse(capturedLoc, out var loc))
+            {
+                startlocation = new WallLocation(loc.Wall, loc.Offset, orientation);
+                setstatus($"start picked: {startlocation.Value}");
+                onsettingchanged(null, EventArgs.Empty);
+            }
+            else
+            {
+                setstatus("pick-start failed: could not parse location");
+            }
+        });
+    }
+
+    private void derivegridsettings()
+    {
+        try
+        {
+            if (ext.Room?.Room == null) return;
+            var room = ext.Room.Room;
+            var plan = room.FloorPlan;
+            int unitsize = 64 / Math.Max(1, plan.Scale);
+            int lxstep = Math.Max(1, HALF_W / Math.Max(1, unitsize));
+
+            var inRoom = griditems.Where(g => g.Item != null).ToList();
+            if (inRoom.Count < 2) return;
+
+            var anchor = inRoom.OrderBy(g => g.Row).ThenBy(g => g.Col).First();
+            if (anchor.Item == null) return;
+            var aLoc = anchor.Item.Location;
+
+            var sameRow = inRoom
+                .Where(g => g.Row == anchor.Row && g.Col > anchor.Col && g.Item != null)
+                .OrderBy(g => g.Col)
+                .FirstOrDefault();
+
+            if (sameRow?.Item != null)
+            {
+                var bLoc = sameRow.Item.Location;
+                int dcol = sameRow.Col - anchor.Col;
+                if (dcol > 0)
+                {
+                    int totalLxDelta = (bLoc.Wall.X - aLoc.Wall.X) * lxstep + (bLoc.Offset.X - aLoc.Offset.X);
+                    int spacingx = totalLxDelta / dcol;
+                    if (spacingx >= 1 && spacingx < 100)
+                        txtspacingx.Text = spacingx.ToString();
+
+                    var (_, ay) = calcitemloc(room, aLoc);
+                    var (_, by) = calcitemloc(room, bLoc);
+                    double rowoffsetD = (by - ay) / (double)(dcol * unitsize);
+                    int rowoffset = (int)Math.Round(rowoffsetD);
+                    if (rowoffset >= -99 && rowoffset <= 99)
+                        txtrowoffset.Text = rowoffset.ToString();
+                }
+            }
+
+            var sameCol = inRoom
+                .Where(g => g.Col == anchor.Col && g.Row > anchor.Row && g.Item != null)
+                .OrderBy(g => g.Row)
+                .FirstOrDefault();
+
+            if (sameCol?.Item != null)
+            {
+                var cLoc = sameCol.Item.Location;
+                int drow = sameCol.Row - anchor.Row;
+                if (drow > 0)
+                {
+                    var (_, ay) = calcitemloc(room, aLoc);
+                    var (_, cy) = calcitemloc(room, cLoc);
+                    int spacingy = (int)Math.Round((cy - ay) / (drow * unitsize));
+                    if (spacingy >= 1 && spacingy < 100)
+                        txtspacingy.Text = spacingy.ToString();
+                }
+            }
+        }
+        catch { }
     }
 
     private void onwallitemadded(IWallItem item)
@@ -584,56 +720,130 @@ public partial class MainWindow : Window
         try
         {
             var content = File.ReadAllText(dlg.FileName);
-            var lines = content.Split('\n', '\r').Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+            var allLines = content.Split('\n', '\r').Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+
+            int? hcols = null, hrows = null, hsx = null, hsy = null, hoff = null, hlayer = null, hscale = null;
+            var itemLines = new List<string>();
+
+            foreach (var line in allLines)
+            {
+                var trimmed = line.TrimStart();
+                if (trimmed.StartsWith("#"))
+                {
+                    var body = trimmed.TrimStart('#', ' ', '\t');
+                    foreach (var part in body.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        var kv = part.Split('=');
+                        if (kv.Length != 2) continue;
+                        if (!int.TryParse(kv[1], out int v)) continue;
+                        switch (kv[0].ToLowerInvariant())
+                        {
+                            case "cols": hcols = v; break;
+                            case "rows": hrows = v; break;
+                            case "spacingx": hsx = v; break;
+                            case "spacingy": hsy = v; break;
+                            case "offset": hoff = v; break;
+                            case "layer": hlayer = v; break;
+                            case "scale": hscale = v; break;
+                        }
+                    }
+                    continue;
+                }
+                itemLines.Add(line);
+            }
+
+            int currentScale = ext.Room?.Room?.FloorPlan?.Scale ?? 64;
+            double scaleAdj = (hscale.HasValue && hscale.Value > 0 && currentScale > 0)
+                ? (double)currentScale / hscale.Value
+                : 1.0;
+
+            if (hcols.HasValue) txtcols.Text = hcols.Value.ToString();
+            if (hrows.HasValue) txtrows.Text = hrows.Value.ToString();
+            if (hsx.HasValue) txtspacingx.Text = Math.Max(1, (int)Math.Round(hsx.Value * scaleAdj)).ToString();
+            if (hsy.HasValue) txtspacingy.Text = Math.Max(1, (int)Math.Round(hsy.Value * scaleAdj)).ToString();
+            if (hoff.HasValue) txtrowoffset.Text = ((int)Math.Round(hoff.Value * scaleAdj)).ToString();
+            if (hlayer.HasValue) txtzindex.Text = hlayer.Value.ToString();
 
             griditems.Clear();
             importedids.Clear();
 
-            foreach (var line in lines)
+            foreach (var line in itemLines)
             {
                 var parts = line.Split('\t');
-                if (parts.Length >= 4 && long.TryParse(parts[0].Trim(), out long id))
-                {
-                    int col = int.TryParse(parts[1].Trim(), out int c) ? c : 0;
-                    int row = int.TryParse(parts[2].Trim(), out int r) ? r : 0;
-                    var locstr = parts[3].Trim();
+                if (parts.Length < 3) continue;
+                if (!long.TryParse(parts[0].Trim(), out long id)) continue;
+                if (id == 0) continue;
 
-                    if (WallLocation.TryParse(locstr, out var loc))
-                    {
-                        importedids.Add(id);
-                        griditems.Add(new GridItem
-                        {
-                            Id = id,
-                            Col = col,
-                            Row = row,
-                            LocationStr = locstr,
-                            TargetLocation = loc,
-                            Item = ext.Room?.Room?.WallItems.FirstOrDefault(x => x.Id == id)
-                        });
-                    }
-                }
+                int col = int.TryParse(parts[1].Trim(), out int c) ? c : 0;
+                int row = int.TryParse(parts[2].Trim(), out int r) ? r : 0;
+                string locstr = parts.Length >= 4 ? parts[3].Trim() : "";
+
+                var gi = new GridItem
+                {
+                    Id = id,
+                    Col = col,
+                    Row = row,
+                    LocationStr = locstr,
+                    Item = ext.Room?.Room?.WallItems.FirstOrDefault(x => x.Id == id)
+                };
+                if (!string.IsNullOrEmpty(locstr) && WallLocation.TryParse(locstr, out var loc))
+                    gi.TargetLocation = loc;
+
+                importedids.Add(id);
+                griditems.Add(gi);
             }
 
-                ignoreidchange = true;
+            ignoreidchange = true;
             txtids.Text = string.Join("\n", importedids);
             ignoreidchange = false;
             lblitemcount.Content = $"Items: {griditems.Count}";
 
             if (griditems.Count > 0)
             {
-                startlocation = griditems[0].TargetLocation;
-                orientation = griditems[0].TargetLocation.Orientation;
+                var topLeft = griditems
+                    .Where(g => g.Item != null)
+                    .OrderBy(g => g.Row).ThenBy(g => g.Col)
+                    .FirstOrDefault();
+
+                bool fromRoom = false;
+                if (topLeft?.Item != null)
+                {
+                    startlocation = topLeft.Item.Location;
+                    orientation = topLeft.Item.Location.Orientation;
+                    fromRoom = true;
+                    setstatus($"loaded {griditems.Count}, start from item in room ({topLeft.Id})");
+                }
+                else
+                {
+                    var firstByGrid = griditems.OrderBy(g => g.Row).ThenBy(g => g.Col).First();
+                    if (!string.IsNullOrEmpty(firstByGrid.LocationStr) && WallLocation.TryParse(firstByGrid.LocationStr, out var fl))
+                    {
+                        startlocation = fl;
+                        orientation = fl.Orientation;
+                        setstatus($"loaded {griditems.Count}, using saved start");
+                    }
+                    else
+                    {
+                        setstatus($"loaded {griditems.Count}, no valid start, capture/import first");
+                    }
+                }
 
                 importedgrid = griditems.ToList();
-                txtcols.Text = (importedgrid.Max(g => g.Col) + 1).ToString();
-                txtrows.Text = (importedgrid.Max(g => g.Row) + 1).ToString();
+
+                if (!hcols.HasValue)
+                    txtcols.Text = (importedgrid.Max(g => g.Col) + 1).ToString();
+                if (!hrows.HasValue)
+                    txtrows.Text = (importedgrid.Max(g => g.Row) + 1).ToString();
+
+                if (fromRoom)
+                    derivegridsettings();
             }
             else
             {
                 importedgrid = null;
+                setstatus("nothing loaded");
             }
 
-            setstatus($"loaded {griditems.Count} items");
             onsettingchanged(null, EventArgs.Empty);
         }
         catch (Exception ex)
@@ -661,12 +871,21 @@ public partial class MainWindow : Window
 
         try
         {
+            int.TryParse(txtcols.Text, out int hcols);
+            int.TryParse(txtrows.Text, out int hrows);
+            int.TryParse(txtspacingx.Text, out int hsx);
+            int.TryParse(txtspacingy.Text, out int hsy);
+            int.TryParse(txtrowoffset.Text, out int hoff);
+            int.TryParse(txtzindex.Text, out int hlayer);
+            int hscale = ext.Room?.Room?.FloorPlan?.Scale ?? 64;
+
             var sb = new StringBuilder();
+            sb.AppendLine($"# wga cols={hcols} rows={hrows} spacingx={hsx} spacingy={hsy} offset={hoff} layer={hlayer} scale={hscale}");
             foreach (var item in griditems)
                 sb.AppendLine($"{item.Id}\t{item.Col}\t{item.Row}\t{item.LocationStr}");
 
             File.WriteAllText(dlg.FileName, sb.ToString());
-            setstatus($"saved {griditems.Count} items");
+            setstatus($"saved {griditems.Count} items + settings");
         }
         catch (Exception ex)
         {
@@ -674,34 +893,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private void sendclientsidepreview()
-    {
-        if (ext.Room?.Room == null) return;
-        if (griditems.Count == 0) return;
-
-        var extcopy = ext;
-        var itemscopy = griditems.ToList();
-
-        Task.Run(async () =>
-        {
-            foreach (var gi in itemscopy)
-            {
-                if (gi.Item == null) continue;
-                try
-                {
-                    var updateditem = new WallItem(gi.Item) { Location = gi.TargetLocation };
-                    var header = extcopy.Messages.Resolve(In.ItemUpdate);
-                    var packet = new Xabbo.Messages.Packet(header, extcopy.Session.Client.Type);
-                    packet.Write(updateditem);
-                    extcopy.Send(packet);
-                }
-                catch { }
-            }
-        });
-    }
-
     private void dopreview()
     {
+        try
+        {
         if (ext.Room?.Room == null)
         {
             setstatus("not in room");
@@ -816,6 +1011,11 @@ public partial class MainWindow : Window
 
             Dispatcher.Invoke(() => setstatus($"preview: {itemscopy.Count}"));
         });
+        }
+        catch (Exception ex)
+        {
+            setstatus($"preview error: {ex.Message}");
+        }
     }
 
     private void onmoveall(object sender, RoutedEventArgs e)

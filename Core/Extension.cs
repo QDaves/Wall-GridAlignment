@@ -3,6 +3,8 @@ using Xabbo.GEarth;
 using Xabbo.Core;
 using Xabbo.Core.Game;
 using Xabbo.Core.GameData;
+using Xabbo.Messages;
+using Xabbo.Messages.Flash;
 
 namespace GridAlignment.Core;
 
@@ -12,6 +14,7 @@ public class Extension : GEarthExtension
     public RoomManager Room { get; private set; }
     public GameDataManager Gamedata { get; private set; }
     public bool Gamedataloaded { get; private set; } = false;
+    public Header? MoveWallItemHeader { get; private set; }
     private bool isloading = false;
     private Hotel loadedhotel = Hotel.None;
 
@@ -66,5 +69,8 @@ public class Extension : GEarthExtension
         base.OnConnected(e);
         CurrentHotel = Hotel.FromGameHost(e.Host);
         Task.Run(() => loadfurnidata());
+
+        try { MoveWallItemHeader = Messages.Resolve(Out.MoveWallItem); }
+        catch { }
     }
 }

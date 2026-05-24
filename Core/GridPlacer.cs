@@ -9,7 +9,7 @@ public class GridPlacer
     private const int HALF_H = 16;
     private const double BASE_OFFSET = 3.59375;
 
-    public static double calcwallheight(IRoom room, WallLocation loc)
+    private static double calcwallheight(IRoom room, WallLocation loc)
     {
         var plan = room.FloorPlan;
         var entry = room.Entry;
@@ -54,7 +54,7 @@ public class GridPlacer
         return (tileh >= 0) ? tileh : result;
     }
 
-    public static (int screenx, int screeny) calcitemloc(IRoom room, WallLocation loc)
+    private static (int screenx, int screeny) calcitemloc(IRoom room, WallLocation loc)
     {
         var plan = room.FloorPlan;
         int unitsize = 64 / plan.Scale;

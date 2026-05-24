@@ -185,10 +185,9 @@
                                   RowHeight="22"
                                   FontSize="11">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70"/>
-                                <DataGridTextColumn Header="Col" Binding="{Binding Col}" Width="35"/>
-                                <DataGridTextColumn Header="Row" Binding="{Binding Row}" Width="35"/>
-                                <DataGridTextColumn Header="Location" Binding="{Binding LocationStr}" Width="*"/>
+                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="*"/>
+                                <DataGridTextColumn Header="Col" Binding="{Binding Col}" Width="50"/>
+                                <DataGridTextColumn Header="Row" Binding="{Binding Row}" Width="50"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
@@ -205,6 +204,7 @@
                         <!-- Arrow buttons with rotate and step -->
                         <Grid HorizontalAlignment="Center" Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="28"/>
                                 <ColumnDefinition Width="36"/>
                                 <ColumnDefinition Width="36"/>
                                 <ColumnDefinition Width="36"/>
@@ -214,12 +214,19 @@
                                 <RowDefinition Height="36"/>
                             </Grid.RowDefinitions>
 
-                            <Button x:Name="btnrotate" Content="↻" Grid.Column="0" Grid.Row="0" Style="{StaticResource posbtn}" ToolTip="Rotate R/L"/>
-                            <Button x:Name="btnposup" Content="↑" Grid.Column="1" Grid.Row="0" Style="{StaticResource posbtn}"/>
-                            <TextBox x:Name="txtstep" Text="15" Grid.Column="2" Grid.Row="0" Width="34" Height="34" TextAlignment="Center" VerticalContentAlignment="Center" FontSize="11" ToolTip="Step size"/>
-                            <Button x:Name="btnposleft" Content="←" Grid.Column="0" Grid.Row="1" Style="{StaticResource posbtn}"/>
-                            <Button x:Name="btnposdown" Content="↓" Grid.Column="1" Grid.Row="1" Style="{StaticResource posbtn}"/>
-                            <Button x:Name="btnposright" Content="→" Grid.Column="2" Grid.Row="1" Style="{StaticResource posbtn}"/>
+                            <Button x:Name="btnpickstart" Content="⌖" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2"
+                                    Width="26" Height="72" FontSize="20" Padding="0" Margin="0,0,2,0"
+                                    Background="#dde4ee" BorderBrush="#99b" BorderThickness="1" Foreground="#335"
+                                    FontFamily="Segoe UI Symbol"
+                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                    ToolTip="Pick start: move any wall item once"/>
+
+                            <Button x:Name="btnrotate" Content="↻" Grid.Column="1" Grid.Row="0" Style="{StaticResource posbtn}" ToolTip="Rotate R/L"/>
+                            <Button x:Name="btnposup" Content="↑" Grid.Column="2" Grid.Row="0" Style="{StaticResource posbtn}"/>
+                            <TextBox x:Name="txtstep" Text="15" Grid.Column="3" Grid.Row="0" Width="34" Height="34" TextAlignment="Center" VerticalContentAlignment="Center" FontSize="11" ToolTip="Step size"/>
+                            <Button x:Name="btnposleft" Content="←" Grid.Column="1" Grid.Row="1" Style="{StaticResource posbtn}"/>
+                            <Button x:Name="btnposdown" Content="↓" Grid.Column="2" Grid.Row="1" Style="{StaticResource posbtn}"/>
+                            <Button x:Name="btnposright" Content="→" Grid.Column="3" Grid.Row="1" Style="{StaticResource posbtn}"/>
                         </Grid>
 
                         <!-- Offset and Layer stacked -->
